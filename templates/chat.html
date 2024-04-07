@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .chat-box {
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+            /* Set a fixed height */
+            background-color: #f2f2f2;
+            /* Background color adjusted */
+            border-radius: 20px;
+            /* Increased border-radius for a softer look */
+            box-shadow: 10px 10px 20px #d9d9d9,
+                -10px -10px 20px #ffffff;
+            /* Soft shadow effect */
+            padding: 20px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            /* Add position relative */
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            /* Enable vertical scrolling */
+        }
+
+        .message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            max-width: 70%;
+            /* Limit width of messages */
+            word-wrap: break-word;
+            /* Wrap long messages */
+        }
+
+        .sent-message {
+            color: #fff;
+            align-self: flex-end;
+            background-color: #007bff;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .received-message {
+            background-color: #e0e0e0;
+            /* Adjusted background color */
+            color: #333;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+            border-bottom-right-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        #message-input {
+            width: calc(100% - 160px);
+            /* Adjusted width */
+            padding: 10px;
+            border: 1px solid #d9d9d9;
+            /* Adjusted border color */
+            border-radius: 20px;
+            /* Increased border-radius for a softer look */
+            outline: none;
+            margin-right: 10px;
+            margin-left: 40px;
+            /* Added margin to separate from the scroll button */
+            background-color: #f2f2f2;
+            /* Background color adjusted */
+            box-shadow: inset 6px 6px 12px #d9d9d9,
+                inset -6px -6px 12px #ffffff;
+            /* Inner shadow effect */
+        }
+
+        #send-button,
+        #logout-button {
+            padding: 10px 20px;
+            border-radius: 20px;
+            /* Increased border-radius for a softer look */
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+            box-shadow: 6px 6px 12px #d9d9d9,
+                -6px -6px 12px #ffffff;
+            /* Soft shadow effect */
+        }
+
+        #send-button:hover,
+        #logout-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Style for the arrow button */
+        #scroll-to-bottom {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            /* Adjusted to left side */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            box-shadow: 6px 6px 12px #d9d9d9,
+                -6px -6px 12px #ffffff;
+            /* Soft shadow effect */
+        }
+
+        #scroll-to-bottom:hover {
+            outline: none;
+            background-color: #0056b3;
+        }
+
+        /* Adjust logout button position */
+        #logout-button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="chat-box">
+            <div id="messages" class="messages"></div>
+            <!-- Arrow button to scroll to bottom -->
+            <button id="scroll-to-bottom" title="Scroll to Bottom">↓</button>
+            <div class="input-container">
+                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+        <button id="logout-button">Logout</button>
+    </div>
+    <script>
+        var socket = io();
+
+        document.getElementById('send-button').onclick = function () {
+            var messageInput = document.getElementById('message-input');
+            var message = messageInput.value.trim();
+            if (message !== '') {
+                socket.emit('message', { message: message, username: '{{ session["username"] }}' });
+                messageInput.value = '';
+            }
+        };
+
+        document.getElementById('logout-button').onclick = function () {
+            window.location.href = '/logout';
+        };
+
+        // Function to scroll to bottom
+        document.getElementById('scroll-to-bottom').onclick = function () {
+            console.log("scrolling....");
+            var messagesDiv = document.getElementById('messages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        socket.on('message', function (data) {
+            var messagesDiv = document.getElementById('messages');
+            var messageDiv = document.createElement('div');
+            messageDiv.textContent = data.username + ': ' + data.message;
+            messageDiv.classList.add('message');
+            if (data.username === '{{ session["username"] }}') {
+                messageDiv.classList.add('sent-message');
+            } else {
+                messageDiv.classList.add('received-message');
+            }
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+    </script>
+</body>
+
+</html>
